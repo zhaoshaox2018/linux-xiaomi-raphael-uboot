@@ -26,7 +26,7 @@ elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     fi
 fi
 
-DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils hexagonrpcd"
+DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils"
 
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     case "$DESKTOP_ENV" in
@@ -146,4 +146,10 @@ if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     fi
 fi
 
+# hexagonrpcd 不在 Ubuntu noble 官方源中，构建时跳过安装
+# 进系统后执行以下命令编译安装：
+#   sudo apt install -y git meson ninja-build pkg-config libglib2.0-dev libqrtr-glib-dev libqmi-glib-dev libyaml-dev libjson-c-dev libudev-dev
+#   git clone https://github.com/linux-msm/hexagonrpc
+#   cd hexagonrpc && meson setup build && ninja -C build && sudo ninja -C build install
+#   sudo systemctl start hexagonrpcd
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ 软件包安装完成"
