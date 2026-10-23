@@ -5,7 +5,7 @@ SYSTEM_TYPE="${SYSTEM_TYPE:-ubuntu-server}"
 DESKTOP_ENV="${DESKTOP_ENV:-}"
 DEBIAN_VERSION="${DEBIAN_VERSION:-trixie}"
 UBUNTU_VERSION="${UBUNTU_VERSION:-resolute}"
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] 📦 安装软件包"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -27,7 +27,7 @@ elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
 fi
 
 DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils"
-
+HEX_DEB="$SCRIPT_DIR/prebuilts/hexagon/hexagonrpcd_0.5.0+git20260813-1_arm64.deb"
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     case "$DESKTOP_ENV" in
         "gnome")
@@ -64,7 +64,15 @@ fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 开始安装（这可能需要几分钟...）"
 chroot rootdir apt-get install -y $ALL_PACKAGES parted
-
+# 本地 deb 安装 hexagonrpcd（Ubuntu noble 无官方包）
+if [ -f "$HEX_DEB" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装本地 hexagonrpcd (.deb)"
+    cp "$HEX_DEB" rootdir/tmp/hexagonrpcd.deb
+    chroot rootdir apt-get install -y /tmp/hexagonrpcd.deb || chroot rootdir apt-get install -f -y
+    rm -f rootdir/tmp/hexagonrpcd.deb
+else
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ ⚠️ hexagonrpcd deb 未找到，跳过"
+fi
 echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 systemd-boot (U-Boot 引导链)"
 chroot rootdir bash -c 'apt-get install -y systemd-boot-efi 2>/dev/null || apt-get install -y systemd-boot 2>/dev/null || true'
 
@@ -145,11 +153,4 @@ if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
         chroot rootdir systemctl enable phosh
     fi
 fi
-
-# hexagonrpcd 不在 Ubuntu noble 官方源中，构建时跳过安装
-# 进系统后执行以下命令编译安装：
-#   sudo apt install -y git meson ninja-build pkg-config libglib2.0-dev libqrtr-glib-dev libqmi-glib-dev libyaml-dev libjson-c-dev libudev-dev
-#   git clone https://github.com/linux-msm/hexagonrpc
-#   cd hexagonrpc && meson setup build && ninja -C build && sudo ninja -C build install
-#   sudo systemctl start hexagonrpcd
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ 软件包安装完成"
